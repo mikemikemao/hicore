@@ -14,6 +14,7 @@
 JNIEXPORT void JNICALL helloHicore(JNIEnv *env, jobject instance)
 {
 	LOGCATE("hello hicore");
+
 }
 
 

@@ -42,11 +42,24 @@ find_library (
         binder_ndk-lib
         binder_ndk
 )
+add_library(
+        libixml
+        STATIC
+        IMPORTED
+)
+
+#指明 so 库的路径，CMAKE_SOURCE_DIR 表示 CMakeLists.txt 的路径
+set_target_properties(
+        libixml
+        PROPERTIES IMPORTED_LOCATION
+        ${CMAKE_SOURCE_DIR}/../jniLibs/arm64-v8a/libixml.a)
+
 
 target_link_libraries( # Specifies the target library.
         ${libname}
         # Links the target library to the log library
         # included in the NDK.
+        libixml
         ${log-lib}
         ${native-libs}
         )
