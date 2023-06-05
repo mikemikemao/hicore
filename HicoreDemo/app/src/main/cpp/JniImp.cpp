@@ -6,11 +6,6 @@
 
 #define NATIVE_HICORE_CLASS_NAME "com/hikvision/Hicore"
 
-/*
- * Class:     com_hikvision_jni_MyCam
- * Method:    stopPreview
- * Signature: ()V
- */
 JNIEXPORT void JNICALL helloHicore(JNIEnv *env, jobject instance)
 {
 	LOGCATE("hello hicore");
