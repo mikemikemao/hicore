@@ -3,17 +3,24 @@
 //
 #include "jni.h"
 #include "utils/LogUtil.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <iostream>
+#include "ixml.h"
+
+using namespace std;
 
 #define NATIVE_HICORE_CLASS_NAME "com/hikvision/Hicore"
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#endif
 
-/*
- * Class:     com_hikvision_jni_MyCam
- * Method:    stopPreview
- * Signature: ()V
- */
 JNIEXPORT void JNICALL helloHicore(JNIEnv *env, jobject instance)
 {
-	LOGCATE("hello hicore");
+    int ret = 0;
+
 }
 
 

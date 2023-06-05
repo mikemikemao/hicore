@@ -7,6 +7,7 @@ import android.os.Bundle;
 import com.hikvision.Hicore;
 import com.hikvision.ThridParty;
 
+
 public class MainActivity extends AppCompatActivity {
     Hicore hicore;
     ThridParty thridParty;
