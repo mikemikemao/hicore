@@ -1,13 +1,17 @@
 
-#ifndef _INCupFile_h
-#define _INCupFile_h
-#include "bootflash.h"
+#ifndef UP_FILE_H
+#define UP_FILE_H
+
+
+#define RESERVED_FEA_NUMS	16
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#define MAX_FILE_NUMS	    32
+#define MAX_FILE_NUMS	    5
 #define UPGRADE_FILE_MD5_LEN (16)   //升级包里的最后16字节为MD5值
 
 #define UPGRADE_PROG_ERR	-1      /*程序执行出错*/      
@@ -28,21 +32,22 @@ extern "C" {
 #define UPGRADE_CANCEL_UPDATE	14		/*下载后删除下载的版本*/
 #define UPGRADE_DATA_LEN_CHECK	15		/*数据长度不够*/
 #define UPGRADE_DATA_PARA_CHECK	16		/*数据参数错误*/
+#define UPGRADE_DATA_DEC_CHECK	17		/*数据解密错误*/
+
 
 
 
 #define UPGRADE_VERSION_1			0xFE
 #define CURRENT_UPGRADE_VERSION		UPGRADE_VERSION_1	/* 当前升级版本号*/
 
-#define UPGRADE_MODE_FTP  	0
-#define UPGRADE_MODE_DEV    1			
-#define UPGRADE_MODE_BAK  	2
-#define UPGRADE_MODE_NET  	3
-#define UPGRADE_MODE_BUF  	4
-#define UPGRADE_MODE_NET_WEB 5
-#define UPGRADE_MODE_HTTP	6
-#define UPGRADE_MODE_NET_EXTEND  	7        /* 网络升级扩展模式，主要用于IE升级 */
-#define UPGRADE_MODE_ONVIF			8		/*通过ONVIF升级*/
+/** @brief:  文件数据加密类型 */
+typedef enum _UPGRADE_SEC_TYPE_E_
+{
+    E_UPGRADE_SEC_AES_256_CBC_PKCS7    = 0,         /* aes_256_cbc_pkcs7 */
+    E_UPGRADE_SEC_NONE                 = 1,         /* 不加密*/
+    E_UPGRADE_SEC_TYPE_INVALID         = 2,         /* 无效值 */
+} UPGRADE_SEC_TYPE_E;
+
 
 typedef enum {
     SYS_UPG_PROC_STEP_GET = 0x00,
@@ -52,86 +57,154 @@ typedef enum {
     SYS_UPG_PROC_INVALID = 0xff,
 }SYS_UPG_PROC_STEP;
 
-typedef struct
+#define FIRMWARE_MAGIC_NUMBER   ("HKSU")  // 升级包固件头魔术字'0x484b5355'
+#define FIRMWARE_MAGIC_LEN      (4)           // 魔术字长度
+#define FIRMWARE_VERSION        (2)           // 升级包版本
+#define FIRMWARE_HEADER_RES_LEN (40)          // 固件头保留字段字节数
+#define KEY_RANDOM_LEN          (4)           // 文件数据密钥经过加密后的长度
+#define FIRMWARE_LANGUAGE_LEN   (16)
+#define FILENAME_LEN            (32)          // 文件名长度
+
+#define AES_256_KEY_LEN_BY_BYTE (32)          // AES加密密钥
+#define SHA256SUM_BY_BYTES_LEN  (32)          // sha256sum字节数
+#define FILE_HEADER_RES_LEN     (20)          // 文件头保留字节
+
+/** @brief:  升级包类型 */
+typedef enum _UPGRADE_PACK_TYPE_E_
 {
-    char pURL[512];               /*文件url   http://domainname/filepatch or ftp://*/
-	char pUser[64];               /* 登入用户名 */
-    char pPwd[64];               /* 登入密码 */
-	HPR_UINT16 ulHttpPort;
-	int iBufLen;
-	int maxtrytimes;/*失败重试次数*/
-} UPGRADE_ONLINE_PARAM_T;
+    E_MAIN_PROGRAM                     = 0,         /* 主程序升级包 */
+    E_MAIN_PROGRAM_SERVICE_PACKAGE     = 1,         /* 主程序补丁包 */
+    E_MAIN_PROGRAM_READER_PACKAGE      = 2,         /* 外接读卡器升级包 */
+    E_MAIN_PROGRAM_MCU_PACKAGE         = 3,         /* mcu升级包 */
+    E_MAIN_PROGRAM_FINGERPRINT_PACKAGE = 4,         /* 指纹模组升级包 */
+    E_UPGRADE_PACKAGE_TYPE_INVALID     = 5,         /* 无效值 */
+} UPGRADE_PACKAGE_TYPE_E;
 
-typedef enum {
-    SYS_UPG_PROC_TYPE_MAIN = 0x00,//主程序
-    SYS_UPG_PROC_TYPE_ZIGBEE = 0x01,//zigbee程序
-}SYS_UPG_PROC_TYPE;//升级类型
 
-typedef struct{
-    HPR_UINT8 updateMode;
-	HPR_UINT8 programType;//详见SYS_UPG_PROC_TYPE
-    HPR_UINT8 res[2];
-    HPR_UINT32 iUserID;
-    HPR_UINT32 serverIp;
-	HPR_UINT16 serverPort;
-	char *pUserName;
-	char *pPassword;
-    HPR_INT64 iSrcfd;
-    char *pFnName;
-    char *pDataBuf;
-    HPR_INT32 iBufLen;
-    HPR_INT8 *pcReadDataBuf;            /* 已读数据指针 */
-    HPR_INT32 iReadLen;                 /* 已读数据长度 */
-    HPR_INT32 iBufHaveLen;
-	HPR_UINT32 maxRetry;
-	UPGRADE_ONLINE_PARAM_T struParam;
-}SYS_UPG_PARAM;
-
-typedef struct{
-	char        fileName[32];		/* 文件名 */
-	UINT32      startOffset;		/* 起始位置 */
-	UINT32      fileLen;			/* 文件长度 */
-	UINT32      checkSum;			/* 校验和 */
-}UPGRADE_FILE_HEADER;
-
-typedef enum 
+/**
+ * @brief:  升级包固件头
+ * @note :  128 bytes
+ **/
+typedef struct _UPGRADE_NEW_FIRMWARE_HEADER_T_
 {
-	UPGRADE_INVALID_VERSION = 0,
-	UPGRADE_STD_VERSION = 1,
-	UPGRADE_NEU_VERSION = 2,
-}UPGRADE_STDNEU_VERSION;
+    unsigned char           byaMagicNumber[FIRMWARE_MAGIC_LEN];             // FIRMWARE_MAGIC_NUMBER-0x484b5355
+    unsigned int            dwVersion;                                      // 升级包版本：V2.3 => 3 <<16 + 2 <<0
+    unsigned int            dwUpgradeHeaderLen;                             // 升级包头长度,包括固件头和所有文件头长度总和
+    unsigned int            dwDeviceClass;                                  // 设备类型
+    unsigned char           byaLanguage[FIRMWARE_LANGUAGE_LEN];             /*16 各个位对应的语言，1表示支持，0表示不支持，可以多种组合
+                                                                              language[0]:bit0： 英语    language[0]:bit1：简体中文   language[0]:bit2：繁体中文   language[0]:bit3：日语     language[0]:bit4：朝鲜语     language[0]:bit5：印度语     language[0]:bit6：蒙古语       language[0]:bit7：越南
+                                                                              language[1]:bit0： 马来文  language[1]:bit1：泰国       language[1]:bit2：菲律宾     language[1]:bit3：印尼文   language[1]:bit4：孟加拉文   language[1]:bit5：老挝文     language[1]:bit6：尼泊尔文     language[1]:bit7：丹麦文 
+                                                                              language[2]:bit0：乌克兰文 language[2]:bit1：乌茲别克语 language[2]:bit2：亚美尼亚语 language[2]:bit3：俄语     language[2]:bit4：保加利亚文 language[2]:bit5：克罗地亚文 language[2]:bit6：冰岛语       language[2]:bit7：加泰罗尼亚文 
+                                                                              language[3]:bit0：匈牙利语 language[3]:bit1：吉尔吉斯语 language[3]:bit2：土库曼语   language[3]:bit3：土耳其文 language[3]:bit4：塞尔维亚文 language[3]:bit5：塞索托语   language[3]:bit6：希伯来语     language[3]:bit7：希腊语 
+                                                                              language[4]:bit0：德语     language[4]:bit1：意大利语   language[4]:bit2：意第绪语   language[4]:bit3：拉丁文   language[4]:bit4：拉脱维亚语 language[4]:bit5：挪威文     language[4]:bit6：捷克语       language[4]:bit7：斯洛伐克文
+                                                                              language[5]:bit0：法语     language[5]:bit1：波兰语     language[5]:bit2：波斯语     language[5]:bit3：爱尔兰语 language[5]:bit4：爱沙尼亚语 language[5]:bit5：瑞典语     language[5]:bit6：瓜拉尼语     language[5]:bit7：立陶宛语 
+                                                                              language[6]:bit0：索马里语 language[6]:bit1：罗马尼亚语 language[6]:bit2：芬兰语     language[6]:bit3：荷兰语   language[6]:bit4：葡萄牙语   language[6]:bit5：西班牙语   language[6]:bit6：阿尔巴尼亚文 language[6]:bit7：阿拉伯文 
+                                                                              language[7]:bit0：马其顿文 language[7]:bit1：马耳他文*/ 
+    unsigned int            dwSupBackup;                                    // 是否支持备份分区
+    unsigned int            dwFileNumber;                                   // 文件个数
+    unsigned int            dwSoftVersion;                                  // 软件版本: V1.3.0 => 1<<24 + 3<<16 + 0<<0
+    unsigned int            dwSoftBuildDate;                                // 构建日期: 160908 => 16<<16 + 9<<8 + 8<<0
+    unsigned int            dwSignOffset;                                   // 签名信息偏移位置 
+    unsigned char           byaKeyRandom[KEY_RANDOM_LEN];                   // 对称秘钥派生随机数
 
-/* file header of digicap.mav */
-typedef struct
-{   /* 64 bytes */
-    UINT32      magic_number;       /* 0x484b5753 */
-    UINT32      header_check_sum;   /* 文件头校验和 */
-    UINT32      header_length;      /* 文件头长度 */
-    UINT32      file_nums;          /* 文件个数 */
-    UINT32      language;           /* 语言 */
-    UINT32      device_class;       /* 1 – DS9000 DVR */
-    UINT32      oemCode;            /* 1 – hikvision  */
-	UINT8		up_type;			/* 升级类型 */
-    UINT8       res_feature[RESERVED_FEA_NUMS];    /* 保留字段 */
-	unsigned char	res[11];
-	unsigned char	std_neu;			/* 标准版，中性版 UPGRADE_STDNEU_VERSION*/
-    UINT32      soft_version;           /* 软件版本: V1.3.0 => 1<<24 + 3<<16 + 0<<0  */  
-    UINT32      soft_builddate;         /* 构建日期: 160908 => 16<<16 + 9<<8 + 8<<0 */
-    UPGRADE_FILE_HEADER  fileHeader[0];
-}FIRMWARE_HEADER;
+    unsigned int            dwSupHeop;                                      // 是否支持HEOP
+    unsigned int            UpgradePackLen;                                 // 升级包总长度
+    UPGRADE_SEC_TYPE_E      eUpgradeSecType;                                // 文件数据加密类型 
+    unsigned int            dwFileHeaderOffset;                             // 表示第一个文件头基于升级包起始位置的偏移(便于后续兼容扩展，读取文件头应该依赖该偏移位置，而不应该直接采用固件头长度偏移获取)
 
-typedef struct
+    unsigned int            dwDevTypeListFileIndex;                         //  因此提供该字段标识第几个文件时设备型号列表，便于识别处理。不存在设备型号列表时该值为0 （不强制规定设备型号列表作为第一个文件的原因是基于V2.1升级包结构编写的应用升级程序无法兼容）
+	unsigned int            dwAvailableSoftVersion; 						//  固件从该版本降级
+    unsigned int            dwAvailableBeginTime;                           //  固件从该日期开始生效
+	unsigned int            dwAvailableDay; 								//  固件有效期
+	unsigned char           byaResFeature[FIRMWARE_HEADER_RES_LEN];         // 保留字段 
+
+} UPGRADE_NEW_FIRMWARE_HEADER_T, *UPGRADE_NEW_FIRMWARE_HEADER_P;
+
+
+/**
+ * @brief:  升级包文件头
+ * @note :  96 bytes
+ **/
+typedef struct _UPGRADE_FILE_HEADER_T_
 {
-    HPR_INT8 *pcData;
-    HPR_UINT32 uiDataLen;
-    HPR_UINT32 uiReadSumLen;
-}SYS_NET_EXTEND_DATA_T;
+    char                    byaFileName[FILENAME_LEN];                // 文件名
+    unsigned int            dwStartOffset;                            // 起始位置
+    unsigned int            dwFileEncryptLen;                         // 文件长度
+    unsigned char           byaSha256Sum[SHA256SUM_BY_BYTES_LEN];     // 文件数据明文hash值，采用sha256算法。
+    UPGRADE_PACKAGE_TYPE_E  enPackageType;                            // 升级包类型
+    unsigned char           byaResFeature[FILE_HEADER_RES_LEN];       // 保留字段
+} UPGRADE_FILE_HEADER_T, *UPGRADE_FILE_HEADER_P;
 
-int getUpgradPercent();
-SYS_UPG_PROC_STEP sys_upg_step(SYS_UPG_PROC_STEP enumUpgStep);
-int sys_upgrade(SYS_UPG_PARAM *pUpgParam);
-int sys_upgrade_ex(SYS_UPG_PARAM *pUpgParam, BOOL bHicoreStarted);
-HPR_INT32 upgrade_online_by_http(UPGRADE_ONLINE_PARAM_T *pstruParam);
+
+
+/*******************************************************************************
+* 函数名  : checkFirmwareHead
+* 描  述  : 获取包头 并进行校验
+* 输  入  : - iSrcfd              :http句柄
+*       : - pDecryFirmHead      :解密后的固件头
+*       : - pEncryFirmHead      :加密后的固件头
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int checkFirmwareHead(int iSrcfd,UPGRADE_NEW_FIRMWARE_HEADER_T* pDecryFirmHead,UPGRADE_NEW_FIRMWARE_HEADER_T* pEncryFirmHead);
+
+
+/*******************************************************************************
+* 函数名  : getEncryptFirmHeadFileHeads
+* 描  述  : 获取加密的固件头和文件头
+* 输  入  : - iSrcfd              :http句柄
+*       : - pEncryFirmHead      :加密后的固件头
+*       : - firmHeadFileHeads   :加密的固件头和文件头内存空间
+*       : - firmHeadFileHeadsLen:加密的固件头和文件头内存空间长度
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int getEncryptFirmHeadFileHeads(int iSrcfd,UPGRADE_NEW_FIRMWARE_HEADER_T* pEncryFirmHead, char* firmHeadFileHeads,int firmHeadFileHeadsLen);
+
+
+/*******************************************************************************
+* 函数名  : getFirmHeadFileHeadsSha256
+* 描  述  : 获取加密的固件头和文件头摘要值
+* 输  入  : - firmHeadFileHeads   :加密的固件头和文件头内存空间
+*       : - firmHeadFileHeadsLen:加密的固件头和文件头内存空间长度
+*       : - byaSha256Sum        :摘要值
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int getFirmHeadFileHeadsSha256(char* firmHeadFileHeads,int firmHeadFileHeadsLen,unsigned char* byaSha256Sum);
+
+/*******************************************************************************
+* 函数名  : getPlainFirmHeadFileHeads
+* 描  述  : 获取明文的固件头和文件头摘要值
+* 输  入  : - firmHeadFileHeads   :加密的固件头和文件头内存空间
+*       : - firmHeadFileHeadsLen:加密的固件头和文件头内存空间长度
+*       : - byaSha256Sum        :摘要值
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int getPlainFirmHeadFileHeads(char* firmHeadFileHeads,int firmHeadFileHeadsLen);
+
+
+/*******************************************************************************
+* 函数名  : getFileHeads
+* 描  述  : 获取文件头
+* 输  入  : - firmHeadFileHeads                    :加密的固件头和文件头内存空间
+*       : - firmHeadFileHeadsLen                 :加密的固件头和文件头内存空间长度
+*       : - UPGRADE_NEW_FIRMWARE_HEADER_T        :固件头
+* 输  出  : 无
+* 返回值  : UPGRADE_FILE_HEADER_P
+*   
+*******************************************************************************/
+UPGRADE_FILE_HEADER_P getFileHeads(char* firmHeadFileHeads,int firmHeadFileHeadsLen, UPGRADE_NEW_FIRMWARE_HEADER_T* pDecryFirmHead);
+
+
+int getSessionKey(unsigned char* random,unsigned char*byaKey);
+
+//int savePackFile(int iSrcfd, UPGRADE_NEW_FILE_HEADER_T* fileHead);
 
 
 
