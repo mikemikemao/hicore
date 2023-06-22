@@ -1,14 +1,117 @@
 //
 // Created by pirate
 //
+#include <sys/endian.h>
 #include "jni.h"
 #include "utils/LogUtil.h"
-
+#include "upFile.h"
+#include "string.h"
+#include "stdlib.h"
 #define NATIVE_HICORE_CLASS_NAME "com/hikvision/Hicore"
+
+int iSrcfd = 1;
+
+int ezviz_sys_upg_down(int iSrcfd)
+{
+	int ret = 0;
+	int len = 0;
+	int iFileNum = 0;
+	int headsLen = 0;
+	UPGRADE_NEW_FIRMWARE_HEADER_T decryFirmHead;
+	memset(&decryFirmHead,0x00,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
+	UPGRADE_NEW_FIRMWARE_HEADER_T encryFirmHead;
+	memset(&encryFirmHead,0x00,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
+	char* firmHeadFileHeads = NULL;
+	int firmHeadFileHeadsLen = 0;
+	unsigned char byaSha256Sum[SHA256SUM_BY_BYTES_LEN] = {0};
+	char byaKey[AES_256_KEY_LEN_BY_BYTE] = {0};
+	UPGRADE_FILE_HEADER_P pstFileHeader   = NULL;
+	if(iSrcfd <= 0)
+	{
+		return UPGRADE_NO_FILE;
+	}
+	//第一步 获取固件头
+	ret = checkFirmwareHead(iSrcfd,&decryFirmHead,&encryFirmHead);
+	if(ret != 0)
+	{
+		APP_ERR("checkFirmwareHead failed ret =%d\n",ret);
+		return ret;
+	}
+	//2.第二部获取固件头和文件头
+	firmHeadFileHeadsLen = ntohl(decryFirmHead.dwUpgradeHeaderLen);
+	firmHeadFileHeads = (char*) malloc (firmHeadFileHeadsLen);
+	ret = getEncryptFirmHeadFileHeads(iSrcfd, &encryFirmHead,firmHeadFileHeads,firmHeadFileHeadsLen);
+	if(ret != 0)
+	{
+		APP_ERR("getEncryptFirmHeadFileHeads failed ret =%d\n",ret);
+		goto err;
+	}
+	//3.获取固件头和文件头的摘要值
+	APP_PRT("getHeadersSha256\n");
+	ret = getFirmHeadFileHeadsSha256(firmHeadFileHeads, firmHeadFileHeadsLen, byaSha256Sum);
+	if(ret != 0)
+	{
+		APP_ERR("getSha256 failed ret =%d\n",ret);
+		goto err;
+	}
+	//4.获取明文
+	ret = getPlainFirmHeadFileHeads(firmHeadFileHeads, firmHeadFileHeadsLen);
+	if(ret != 0)
+	{
+		APP_ERR("getPlainFirmHeadFileHeads failed ret =%d\n",ret);
+		goto err;
+	}
+	//5、获取会话密钥
+	APP_PRT("getSessionKey\n");
+	ret = 0;//getSessionKey(decryFirmHead.byaKeyRandom,byaKey);
+	if(ret != 0)
+	{
+		APP_ERR("getSha256 failed ret =%d\n",ret);
+		goto err;
+	}
+	//6获取文件头指针
+	pstFileHeader = getFileHeads(firmHeadFileHeads,firmHeadFileHeadsLen,&decryFirmHead);
+	if(pstFileHeader == NULL)
+	{
+		APP_ERR("getFileHeads failed\n");
+		goto err;
+	}
+	iFileNum = ntohl(decryFirmHead.dwFileNumber);
+	for(int i = 0; i <  iFileNum; i++)
+	{
+		APP_PRT("byaFileName:%s\n",pstFileHeader[i].byaFileName);
+		APP_PRT("dwStartOffset:%u\n",ntohl(pstFileHeader[i].dwStartOffset));
+		APP_PRT("dwFileEncryptLen:%u\n",ntohl(pstFileHeader[i].dwFileEncryptLen));
+		APP_PRT("enPackageType:%d\n",ntohl(pstFileHeader[i].enPackageType));
+	}
+	//获取每个文件
+	for(int i = 0; i < iFileNum; i++)
+	{
+		ret = 0;//savePackFile(iSrcfd,&fileHeads[i]);
+		if(ret != 0)
+		{
+			APP_ERR("savePackFile failed ret =%d\n",ret);
+			return ret;
+		}
+	}
+
+	//校验验签
+
+	//设置升级标志位
+	err:
+	if(firmHeadFileHeads != NULL)
+	{
+		free(firmHeadFileHeads);
+		firmHeadFileHeads = NULL;
+	}
+	return 0;
+
+}
 
 JNIEXPORT void JNICALL helloHicore(JNIEnv *env, jobject instance)
 {
 	LOGCATE("hello hicore");
+	ezviz_sys_upg_down(iSrcfd);
 
 }
 

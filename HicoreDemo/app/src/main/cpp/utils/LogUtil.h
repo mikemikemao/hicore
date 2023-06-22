@@ -47,4 +47,8 @@ static long long GetSysCurrentTime()
 
 #define DEBUG_LOGCATE(...) LOGCATE("DEBUG_LOGCATE %s line = %d",  __FUNCTION__, __LINE__)
 
+
+#define APP_ERR(fmt, ...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG, "[%s:%d]" fmt, __FUNCTION__, __LINE__,##__VA_ARGS__);
+#define APP_PRT(fmt, ...)  __android_log_print(ANDROID_LOG_DEBUG,LOG_TAG, "[%s:%d]" fmt, __FUNCTION__, __LINE__,##__VA_ARGS__);
+
 #endif //BYTEFLOW_LOGUTIL_H

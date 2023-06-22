@@ -3,18 +3,51 @@
 #include <malloc.h>
 #include <endian.h>
 #include "upFile.h"
-#include "prtUtil.h"
+//#include "prtUtil.h"
 #include "arpa/inet.h"
-#include "ezviz_app_common_tools.h"
+//#include "ezviz_app_common_tools.h"
 //#include "openssl/evp.h"
 //#include "openssl/aes.h"
 //#include "openssl/sha.h"
 
-#include "securec_api.h"
+//#include "securec_api.h"
 #include "FileOp.h"
-#include "paramLib.h"
+//#include "paramLib.h"
+#include "FileOp.h"
 
 #define APP_PACK_NAME "digicap"
+
+#include "LogUtil.h"
+
+#define SOFT_MAJOR_VERSION  1
+#define SOFT_MINOR_VERSION  0
+#define SOFT_REVISION       0
+#define MAJOR_SHIFT 	24
+#define MINOR_SHIFT 	16
+#define REVISION_SHIFT 0
+
+#define DEVICE_CLASS   1018
+#define SUPPORT_LANGUAGE 2  //支持中文
+
+#define FILE_PATH "/sdcard/digicap.dav"
+
+
+unsigned int getSoftVersion(char *buf)
+{
+    if (buf)
+    {
+        sprintf(buf, "V%d.%d.%d", SOFT_MAJOR_VERSION, SOFT_MINOR_VERSION, SOFT_REVISION);
+    }
+    return (((SOFT_MAJOR_VERSION)<<(MAJOR_SHIFT)) | ((SOFT_MINOR_VERSION)<<(MINOR_SHIFT)) |((SOFT_REVISION)<<(REVISION_SHIFT)));
+}
+
+unsigned int getDeviceClass(){
+    return DEVICE_CLASS;
+}
+
+unsigned int getLanguage(){
+    return SUPPORT_LANGUAGE;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +141,42 @@ static int getSha256(char* buff,int buffLen,unsigned char* byaSha256Sum)
     return 0;
 }
 
-
+static int getFileData(int iSrcfd,char* data,int dataLen)
+{
+#if 0
+    int len = http_read_line(iSrcfd, data, dataLen);
+    if(len != dataLen)
+    {
+        APP_ERR("ezdev_http_read_msg failed revlen =%d needlen =%d\n",len,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
+        return UPGRADE_DATA_LEN_CHECK;
+    }
+#endif
+    static int current = 0;
+    int ret = 0;
+    ret = FileOp::GetDataSize(FILE_PATH);
+    if(ret < 0)
+    {
+        APP_ERR("GetDataSize failed ret =%d\n",ret);
+        return ret;
+    }
+    APP_PRT("fileLen =%d\n",ret);
+    char* buff = (char*) malloc(ret);
+    ret = FileOp::ReadData(FILE_PATH,(unsigned char*)buff,ret);
+    if(ret != 0)
+    {
+        APP_ERR("ReadData failed ret =%d\n",ret);
+        goto err;
+    }
+    memcpy(data,buff+current,dataLen);
+    current = current + dataLen;
+err:
+    if (buff)
+    {
+        free(buff);
+        buff = NULL;
+    }
+    return 0;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///业务具体实现
@@ -202,11 +270,11 @@ int checkFirmwareHead(int iSrcfd,UPGRADE_NEW_FIRMWARE_HEADER_T* pDecryFirmHead,U
         return UPGRADE_DATA_PARA_CHECK;
     }
     //获取数据
-    int len = http_read_line(iSrcfd, (char*)pEncryFirmHead, sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
-    if(len != sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T))
+    ret = getFileData(iSrcfd,(char*)pEncryFirmHead,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
+    if(ret != 0)
     {
-        APP_ERR("ezdev_http_read_msg failed revlen =%d needlen =%d\n",len,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
-        return UPGRADE_DATA_LEN_CHECK;
+        APP_ERR("getFileData failed ret =%d \n",ret);
+        return ret;
     }
     
     dwDeviceClass = getDeviceClass();
@@ -241,13 +309,13 @@ int getEncryptFirmHeadFileHeads(int iSrcfd,UPGRADE_NEW_FIRMWARE_HEADER_T* pEncry
         return UPGRADE_DATA_PARA_CHECK;
     }
 
-    memcpy_sec(firmHeadFileHeads, firmHeadFileHeadsLen, pEncryFirmHead, sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
+    memcpy(firmHeadFileHeads, pEncryFirmHead, sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
     //获取数据
-    int len = http_read_line(iSrcfd, firmHeadFileHeads+sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T), fileHeadsLen);
-    if(len != fileHeadsLen)
+    ret = getFileData(iSrcfd,firmHeadFileHeads+sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T),fileHeadsLen);
+    if(ret != 0)
     {
-        APP_ERR("ezdev_http_read_msg failed revlen =%d needlen =%d\n",len,fileHeadsLen);
-        return UPGRADE_DATA_LEN_CHECK;
+        APP_ERR("getFileData failed ret =%d \n",ret);
+        return ret;
     }
     
     return UPGRADE_OK;
