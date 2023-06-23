@@ -6,9 +6,9 @@
 //#include "prtUtil.h"
 #include "arpa/inet.h"
 //#include "ezviz_app_common_tools.h"
-//#include "openssl/evp.h"
-//#include "openssl/aes.h"
-//#include "openssl/sha.h"
+#include "openssl/evp.h"
+#include "openssl/aes.h"
+#include "openssl/sha.h"
 
 //#include "securec_api.h"
 #include "FileOp.h"
@@ -95,7 +95,7 @@ static int convertData(char *src, char *dst, int len)
 static int decAesCbc(unsigned char* sessionKey, unsigned char* iv,unsigned char* encrypData,int encrypDataLen, unsigned char* plainData)
 {
     int ret  = 0;
-    /*EVP_CIPHER_CTX *pstCtx  = NULL;
+    EVP_CIPHER_CTX *pstCtx  = NULL;
     int sdwDecryptLen = 0;
     
     pstCtx = EVP_CIPHER_CTX_new();
@@ -124,19 +124,19 @@ err:
         EVP_CIPHER_CTX_free(pstCtx);
         pstCtx = NULL;
     }
-    return ret;*/
-    return 0;
+    return ret;
+    //return 0;
 }
 
 
 static int getSha256(char* buff,int buffLen,unsigned char* byaSha256Sum)
 {
     int ret = 0;
-    /*SHA256_CTX stSha256Ctx;
+    SHA256_CTX stSha256Ctx;
     
     SHA256_Init(&stSha256Ctx);
     SHA256_Update(&stSha256Ctx, buff, buffLen);
-    SHA256_Final(byaSha256Sum ,&stSha256Ctx);*/
+    SHA256_Final(byaSha256Sum ,&stSha256Ctx);
 
     return 0;
 }
