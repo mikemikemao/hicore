@@ -135,7 +135,14 @@ typedef struct _UPGRADE_FILE_HEADER_T_
     unsigned char           byaResFeature[FILE_HEADER_RES_LEN];       // 保留字段
 } UPGRADE_FILE_HEADER_T, *UPGRADE_FILE_HEADER_P;
 
-
+/*************************************************
+Function: 		hex2string
+Description: 	hex字符数组转换成string字符串，用于printf显示等
+Input: 			hex:原字符数组
+                len:hex数组的长度
+Return:
+*************************************************/
+int tool_print_hex(char *pbySrc, int sdwLen);
 
 /*******************************************************************************
 * 函数名  : checkFirmwareHead
@@ -201,10 +208,27 @@ int getPlainFirmHeadFileHeads(char* firmHeadFileHeads,int firmHeadFileHeadsLen);
 *******************************************************************************/
 UPGRADE_FILE_HEADER_P getFileHeads(char* firmHeadFileHeads,int firmHeadFileHeadsLen, UPGRADE_NEW_FIRMWARE_HEADER_T* pDecryFirmHead);
 
+/*******************************************************************************
+* 函数名  : getSessionKey
+* 描  述  : 获取会话密钥
+* 输  入  : - random                               :升级包中所带的随机数
+*        : - byaKey                               :生成的会话密钥
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int getSessionKey(unsigned char* random,unsigned char* byaKey);
 
-int getSessionKey(unsigned char* random,unsigned char*byaKey);
-
-//int savePackFile(int iSrcfd, UPGRADE_NEW_FILE_HEADER_T* fileHead);
+/*******************************************************************************
+* 函数名  : unpack_file_data_each
+* 描  述  : 处理每个升级文件
+* 输  入  : - pstFileHeader                        :文件头
+*        : - byaKey                               :会话密钥
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int unpack_file_data_each(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsigned char byaKey[AES_256_KEY_LEN_BY_BYTE]);
 
 
 

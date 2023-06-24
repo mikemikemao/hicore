@@ -23,8 +23,9 @@ int ezviz_sys_upg_down(int iSrcfd)
 	memset(&encryFirmHead,0x00,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
 	char* firmHeadFileHeads = NULL;
 	int firmHeadFileHeadsLen = 0;
+	int devTypeListFileIndex = 0;
 	unsigned char byaSha256Sum[SHA256SUM_BY_BYTES_LEN] = {0};
-	char byaKey[AES_256_KEY_LEN_BY_BYTE] = {0};
+	unsigned char byaKey[AES_256_KEY_LEN_BY_BYTE] = {0};
 	UPGRADE_FILE_HEADER_P pstFileHeader   = NULL;
 	if(iSrcfd <= 0)
 	{
@@ -63,7 +64,7 @@ int ezviz_sys_upg_down(int iSrcfd)
 	}
 	//5、获取会话密钥
 	APP_PRT("getSessionKey\n");
-	ret = 0;//getSessionKey(decryFirmHead.byaKeyRandom,byaKey);
+	ret = getSessionKey(decryFirmHead.byaKeyRandom,byaKey);
 	if(ret != 0)
 	{
 		APP_ERR("getSha256 failed ret =%d\n",ret);
@@ -77,28 +78,30 @@ int ezviz_sys_upg_down(int iSrcfd)
 		goto err;
 	}
 	iFileNum = ntohl(decryFirmHead.dwFileNumber);
+	devTypeListFileIndex = ntohl(decryFirmHead.dwDevTypeListFileIndex);
 	for(int i = 0; i <  iFileNum; i++)
 	{
 		APP_PRT("byaFileName:%s\n",pstFileHeader[i].byaFileName);
 		APP_PRT("dwStartOffset:%u\n",ntohl(pstFileHeader[i].dwStartOffset));
 		APP_PRT("dwFileEncryptLen:%u\n",ntohl(pstFileHeader[i].dwFileEncryptLen));
 		APP_PRT("enPackageType:%d\n",ntohl(pstFileHeader[i].enPackageType));
-	}
-	//获取每个文件
-	for(int i = 0; i < iFileNum; i++)
-	{
-		ret = 0;//savePackFile(iSrcfd,&fileHeads[i]);
-		if(ret != 0)
+        if(devTypeListFileIndex == i+1)
 		{
-			APP_ERR("savePackFile failed ret =%d\n",ret);
-			return ret;
+
+		}else
+		{
+			ret = unpack_file_data_each(iSrcfd, pstFileHeader, byaKey);
+			if (ret != 0)
+			{
+				APP_ERR("unpack_file_data_each failed ret =%d\n",ret);
+				goto err;
+			}
 		}
 	}
-
 	//校验验签
 
 	//设置升级标志位
-	err:
+err:
 	if(firmHeadFileHeads != NULL)
 	{
 		free(firmHeadFileHeads);
