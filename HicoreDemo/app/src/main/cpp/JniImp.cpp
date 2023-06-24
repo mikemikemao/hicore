@@ -86,17 +86,23 @@ int ezviz_sys_upg_down(int iSrcfd)
 		APP_PRT("dwFileEncryptLen:%u\n",ntohl(pstFileHeader[i].dwFileEncryptLen));
 		APP_PRT("enPackageType:%d\n",ntohl(pstFileHeader[i].enPackageType));
         if(devTypeListFileIndex == i+1)
-		{
+        {
+            ret = unpack_dev_type_info(iSrcfd, &pstFileHeader[i], byaKey);
+            if (ret != 0)
+            {
+                APP_ERR("unpack_dev_type_info failed ret =%d\n",ret);
+                goto err;
+            }
+        }else
+        {
+            ret = unpack_file_data_each(iSrcfd, &pstFileHeader[i], byaKey);
+            if (ret != 0)
+            {
+                APP_ERR("unpack_file_data_each failed ret =%d\n",ret);
+                goto err;
+            }
+        }
 
-		}else
-		{
-			ret = unpack_file_data_each(iSrcfd, pstFileHeader, byaKey);
-			if (ret != 0)
-			{
-				APP_ERR("unpack_file_data_each failed ret =%d\n",ret);
-				goto err;
-			}
-		}
 	}
 	//校验验签
 

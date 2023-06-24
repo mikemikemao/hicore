@@ -69,7 +69,8 @@ typedef enum {
 #define SHA256SUM_BY_BYTES_LEN  (32)          // sha256sum字节数
 #define FILE_HEADER_RES_LEN     (20)          // 文件头保留字节
 
-/** @brief:  升级包类型 */
+#define FILE_PATH_LEN               (128)          //
+
 typedef enum _UPGRADE_PACK_TYPE_E_
 {
     E_MAIN_PROGRAM                     = 0,         /* 主程序升级包 */
@@ -77,7 +78,14 @@ typedef enum _UPGRADE_PACK_TYPE_E_
     E_MAIN_PROGRAM_READER_PACKAGE      = 2,         /* 外接读卡器升级包 */
     E_MAIN_PROGRAM_MCU_PACKAGE         = 3,         /* mcu升级包 */
     E_MAIN_PROGRAM_FINGERPRINT_PACKAGE = 4,         /* 指纹模组升级包 */
-    E_UPGRADE_PACKAGE_TYPE_INVALID     = 5,         /* 无效值 */
+    E_MAIN_PROGRAM_OTA_PACKAGE         = 5,         /* 主程序OTA升级包 */
+    E_FIRMWARW_PARTITION               = 6,         /* 固件分区镜像 */
+    E_UPGRDE_DEV_TYPE_LIST             = 7,         /* 支持升级设备型号列表 */
+    E_TTS_PARTITION                    = 8,         /* TTS资源分区镜像 */
+    E_ROOTFS_PARTITION                 = 9,         /* 主程序根文件系统分区镜像 */
+    E_KERNEL_PARTITION                 = 10,        /* 内核分区镜像 */
+    E_WIFI_MODULE_PACKAGE              = 11,        /* WIFI模块升级文件 */
+    E_UPGRADE_PACKAGE_TYPE_INVALID,                 /* 无效值 */
 } UPGRADE_PACKAGE_TYPE_E;
 
 
@@ -230,7 +238,16 @@ int getSessionKey(unsigned char* random,unsigned char* byaKey);
 *******************************************************************************/
 int unpack_file_data_each(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsigned char byaKey[AES_256_KEY_LEN_BY_BYTE]);
 
-
+/*******************************************************************************
+* 函数名  : unpack_dev_type_info
+* 描  述  : 解析设备型号列表数据
+* 输  入  : - pstFileHeader                        :文件头
+*        : - byaKey                               :会话密钥
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int unpack_dev_type_info(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsigned char byaKey[AES_256_KEY_LEN_BY_BYTE]);
 
 #ifdef __cplusplus
 }

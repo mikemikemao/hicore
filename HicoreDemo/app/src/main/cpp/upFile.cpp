@@ -18,6 +18,8 @@
 #include "LogUtil.h"
 #include "include/openssl/ossl_typ.h"
 
+typedef unsigned int UPGRADE_DEV_TYPE;
+
 #define SOFT_MAJOR_VERSION  1
 #define SOFT_MINOR_VERSION  0
 #define SOFT_REVISION       0
@@ -28,9 +30,12 @@
 #define DEVICE_CLASS   1018
 #define SUPPORT_LANGUAGE 2  //支持中文
 
-#define FILE_PATH "/sdcard/digicap.dav"
 #define PROC_ENC_PER_BLOCK_LEN (100*1024)
 #define AES_BLOCK_LEN_BY_BYTE  (16)
+
+
+
+#define DIGICAP_FILE_PATH   "/sdcard/digicap.dav"
 
 static char s_tmpSessionKey[AES_256_KEY_LEN_BY_BYTE] = {0x21,0xe6,0x4f,0xde,0xc6,0x1b,0x13,0x5a,0x45,0x9a,0x9b,0x27,0x75,0xe7,0x18,0xe6,0xf8,0xcc,0x5f,0x10,0x04,0x4f,0x49,0xe0,0x39,0x93,0xcd,0x6e,0x0a,0x24,0xab,0x56};
 
@@ -192,7 +197,7 @@ static int getFileData(int iSrcfd,char* data,int dataLen)
 #endif
     static int current = 0;
     int ret = 0;
-    ret = FileOp::GetDataSize(FILE_PATH);
+    ret = FileOp::GetDataSize(DIGICAP_FILE_PATH);
     if(ret < 0)
     {
         APP_ERR("GetDataSize failed ret =%d\n",ret);
@@ -200,7 +205,7 @@ static int getFileData(int iSrcfd,char* data,int dataLen)
     }
     APP_PRT("fileLen =%d\n",ret);
     char* buff = (char*) malloc(ret);
-    ret = FileOp::ReadData(FILE_PATH,(unsigned char*)buff,ret);
+    ret = FileOp::ReadData(DIGICAP_FILE_PATH,(unsigned char*)buff,ret);
     if(ret != 0)
     {
         APP_ERR("ReadData failed ret =%d\n",ret);
@@ -208,6 +213,43 @@ static int getFileData(int iSrcfd,char* data,int dataLen)
     }
     memcpy(data,buff+current,dataLen);
     current = current + dataLen;
+err:
+    if (buff)
+    {
+        free(buff);
+        buff = NULL;
+    }
+    return 0;
+}
+
+
+static int getFileDataEx(int iSrcfd,char* data,int offset,int dataLen)
+{
+#if 0
+    int len = http_read_line(iSrcfd, data, dataLen);
+    if(len != dataLen)
+    {
+        APP_ERR("ezdev_http_read_msg failed revlen =%d needlen =%d\n",len,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
+        return UPGRADE_DATA_LEN_CHECK;
+    }
+#endif
+    int ret = 0;
+    ret = FileOp::GetDataSize(DIGICAP_FILE_PATH);
+    if(ret < 0)
+    {
+        APP_ERR("GetDataSize failed ret =%d\n",ret);
+        return ret;
+    }
+    APP_PRT("fileLen =%d\n",ret);
+    char* buff = (char*) malloc(ret);
+    ret = FileOp::ReadData(DIGICAP_FILE_PATH,(unsigned char*)buff,ret);
+    if(ret != 0)
+    {
+        APP_ERR("ReadData failed ret =%d\n",ret);
+        goto err;
+    }
+    memcpy(data,buff+offset,dataLen);
+
 err:
     if (buff)
     {
@@ -457,6 +499,8 @@ int unpack_file_data_each(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsign
     EVP_CIPHER_CTX * pstCtx = NULL;
     SHA256_CTX stSha256Ctx;
     memset(&stSha256Ctx,0x00,sizeof(stSha256Ctx));
+    char filePath[FILE_PATH_LEN] = {0};
+    snprintf(filePath,FILE_PATH_LEN,"/sdcard/%s",pstFileHeader->byaFileName);
 
     if (NULL == pstFileHeader)
     {
@@ -515,7 +559,6 @@ int unpack_file_data_each(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsign
             goto EXIT_PORT;
         }
         //默认为E_UPGRADE_SEC_AES_256_CBC_PKCS7 加密方式
-        pbyWriteBuf   = pbyDecBuf;
         EVP_DecryptUpdate(pstCtx, (unsigned char*)pbyDecBuf, &sdwDecryptLen, (unsigned char*)pbyReadBuf, sdwReadLen); //对满足16字节组数据进行加密
         if (0 == sdwFileLeftLen)
         {
@@ -536,7 +579,7 @@ int unpack_file_data_each(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsign
             }
         }
         //保存数据到本地
-        ret = FileOp::SaveDataApp("/sdcard/plain.bin", (unsigned char*)pbyDecBuf,sdwDecryptLen);
+        ret = FileOp::SaveDataApp(filePath, (unsigned char*)pbyDecBuf,sdwDecryptLen);
         if(ret != 0)
         {
             APP_ERR("SaveDataApp fail \n");
@@ -566,78 +609,131 @@ EXIT_PORT:
 }
 
 
-/*
-int savePackFile(int iSrcfd, UPGRADE_NEW_FILE_HEADER_T* fileHead)
+
+/*******************************************************************************
+* 函数名  : unpack_dev_type_info
+* 描  述  : 解析设备型号列表数据
+* 输  入  : - pstFileHeader                        :文件头
+*        : - byaKey                               :会话密钥
+* 输  出  : 无
+* 返回值  : 0     : 成功
+*         其他 : 失败
+*******************************************************************************/
+int unpack_dev_type_info(int iSrcfd,UPGRADE_FILE_HEADER_P pstFileHeader, unsigned char byaKey[AES_256_KEY_LEN_BY_BYTE])
 {
     int ret = 0;
-    int diff = 0;
-    char* buff = NULL;
-    char filePath[100] = {0};
-    unsigned char byaIv[AES_256_KEY_LEN_BY_BYTE]  = {0};
+    int sdwReadLen = 0;
+    int sdwFileLeftLen = 0;
+    int fileStartOffset = 0;
+    int eUpgradeSecType = 0;
+    int sdwDecryptLen = 0;
+    int sdwPaddingLen = 0;
     unsigned char byaSha256Sum[SHA256SUM_BY_BYTES_LEN] = {0};
-    
-    if(NULL == fileHead)
+    unsigned char byaIv[AES_BLOCK_LEN_BY_BYTE]         = {0};
+    memset(byaIv, 0x00, AES_BLOCK_LEN_BY_BYTE);
+    unsigned int enPackageType = E_UPGRADE_PACKAGE_TYPE_INVALID;
+    char *pbyReadBuf  = NULL;
+    char *pbyDecBuf   = NULL;
+    char *pbyWriteBuf = NULL;
+    EVP_CIPHER_CTX * pstCtx = NULL;
+    SHA256_CTX stSha256Ctx;
+    memset(&stSha256Ctx,0x00,sizeof(stSha256Ctx));
+    int devListNum = 0;
+
+    if (NULL == pstFileHeader)
     {
+        APP_ERR("param err\n");
         return UPGRADE_DATA_PARA_CHECK;
     }
-    
-    buff = (char*)malloc(fileHead->dwFileEncryptLen);
-    if (NULL == buff)
+
+    pstCtx = aesInit(byaKey,byaIv);
+    if (NULL == pstCtx)
     {
-        APP_ERR("malloc failed !\n");
-        return UPGRADE_NO_MEM;
+        APP_ERR("aesInit err\n");
+        return UPGRADE_DATA_DEC_CHECK;
     }
 
-    //获取数据
-    unsigned int len = http_read_line(iSrcfd, buff, fileHead->dwFileEncryptLen);
-    if(len != fileHead->dwFileEncryptLen )
+    SHA256_Init(&stSha256Ctx);
+
+    pbyReadBuf = (char*)malloc(PROC_ENC_PER_BLOCK_LEN);
+    if (NULL == pbyReadBuf)
     {
-        APP_ERR("ezdev_http_read_msg failed revlen =%d needlen =%d\n",len,sizeof(UPGRADE_NEW_FIRMWARE_HEADER_T));
-        ret = UPGRADE_DATA_LEN_CHECK;
-        goto err;
+        APP_ERR("malloc fail\n");
+        ret = UPGRADE_NO_MEM;
+        goto EXIT_PORT;
     }
 
-    //解密
-    ret = decAesCbc(byaSha256Sum, byaIv, (unsigned char*)buff, len, (unsigned char*)buff);
-    if(ret != 0)
+    pbyDecBuf = (char*)malloc(PROC_ENC_PER_BLOCK_LEN + AES_BLOCK_LEN_BY_BYTE);
+    if (NULL == pbyDecBuf)
     {
-        APP_ERR("decAesCbc failed ret =%d\n",ret);
-        ret = UPGRADE_DATA_DEC_CHECK;
-        goto err;
+        APP_ERR("malloc fail\n");
+        ret = UPGRADE_NO_MEM;
+        goto EXIT_PORT;
     }
 
-    //SHA256校验
-    getSha256(buff,len,byaSha256Sum);
-
-    if (memcmp_sec(byaSha256Sum, SHA256SUM_BY_BYTES_LEN, fileHead->byaSha256Sum, SHA256SUM_BY_BYTES_LEN, &diff))
+    enPackageType = ntohl(pstFileHeader->enPackageType);
+    APP_PRT("enPackageType =%d\n", enPackageType);
+    if (E_UPGRDE_DEV_TYPE_LIST != enPackageType)
     {
-        APP_ERR("sha256 check failed ret =%d\n",ret);
+        APP_ERR("not supported upgrade pack type %d\n", enPackageType);
         ret = UPGRADE_DATA_ERROR;
-        goto err;
+        goto EXIT_PORT;
     }
 
-    if (0 == memcmp_sec(fileHead->byaFileName, sizeof(APP_PACK_NAME), APP_PACK_NAME, sizeof(APP_PACK_NAME), &diff))
+    fileStartOffset = ntohl(pstFileHeader->dwStartOffset);
+    sdwFileLeftLen = ntohl(pstFileHeader->dwFileEncryptLen);
+
+    memset(pbyReadBuf, 0, PROC_ENC_PER_BLOCK_LEN);
+    memset(pbyDecBuf, 0, PROC_ENC_PER_BLOCK_LEN + AES_BLOCK_LEN_BY_BYTE);
+
+    ret = getFileData(iSrcfd,pbyReadBuf,sdwFileLeftLen);
+    if (ret != 0)
     {
-        ret = saveAppPack();
+        APP_ERR("get file data failed ret = %d\n",ret);
+        ret = UPGRADE_DATA_ERROR;
+        goto EXIT_PORT;
     }
-    else
+    //默认为E_UPGRADE_SEC_AES_256_CBC_PKCS7 加密方式
+    EVP_DecryptUpdate(pstCtx, (unsigned char*)pbyDecBuf, &sdwDecryptLen, (unsigned char*)pbyReadBuf, sdwFileLeftLen); //对满足16字节组数据进行加密
+    EVP_DecryptFinal(pstCtx, (unsigned char*)pbyDecBuf + sdwDecryptLen, &sdwPaddingLen); //对满足16字节组数据进行加密
+    sdwDecryptLen += sdwPaddingLen;
+
+    SHA256_Update(&stSha256Ctx, pbyDecBuf, sdwDecryptLen);
+    SHA256_Final(byaSha256Sum ,&stSha256Ctx);
+
+    if (0 != memcmp(pstFileHeader->byaSha256Sum, byaSha256Sum, SHA256SUM_BY_BYTES_LEN))
     {
-        sprintf(filePath, "U://%s", fileHead->byaFileName);
-        ret = writeFile(filePath, buff, len);
-        if(ret != 0)
-        {
-            APP_ERR("writeFile failed ret =%d\n",ret);
-            ret = UPGRADE_DATA_ERROR;
-            goto err;
-        }
+        APP_ERR("sha256 check fail \n");
+        ret = UPGRADE_DATA_ERROR;
+        goto EXIT_PORT;
     }
 
-err:
-    if(NULL != buff)
+    devListNum = sdwDecryptLen / sizeof (UPGRADE_DEV_TYPE);
+    APP_PRT("supportNum = %d\n",devListNum);
+    APP_PRT("DevList:\n");
+    for(int i = 0; i < devListNum; i++)
     {
-        free(buff);
-        buff = NULL;
+        int tmp = 0;
+        memcpy(&tmp,pbyDecBuf+i*4,4);
+        APP_PRT("    %x\n",tmp);
     }
+
+EXIT_PORT:
+    if(pbyReadBuf != NULL)
+    {
+        free(pbyReadBuf);
+        pbyReadBuf = NULL;
+    }
+    if(pbyDecBuf != NULL)
+    {
+        free(pbyDecBuf);
+        pbyDecBuf = NULL;
+    }
+    if(pstCtx != NULL)
+    {
+        aesDeinit(pstCtx);
+        pstCtx = NULL;
+    }
+
     return ret;
-}*/
-
+}
