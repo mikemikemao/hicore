@@ -4,7 +4,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.10.2)
 ADD_SUBDIRECTORY(libosip2)
 ADD_SUBDIRECTORY(libeXosip2)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
 
 set(jnilibs ${CMAKE_SOURCE_DIR}/../jniLibs)
 set(libname thridparty)
@@ -12,6 +12,7 @@ set(libname thridparty)
 include_directories(
         ${CMAKE_SOURCE_DIR}/
         ${CMAKE_SOURCE_DIR}/utils
+        ${CMAKE_SOURCE_DIR}/sipWrapper
         libosip2/include
         libeXosip2/include
 )
@@ -23,6 +24,7 @@ link_directories(
 file(GLOB src-files
         ${CMAKE_SOURCE_DIR}/*.cpp
         ${CMAKE_SOURCE_DIR}/utils/*.cpp
+        ${CMAKE_SOURCE_DIR}/sipWrapper/*.cpp
         )
 
 add_library( # Sets the name of the library.
