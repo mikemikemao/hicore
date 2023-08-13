@@ -8,6 +8,7 @@
 #include <linux/in.h>
 #include <iostream>
 #include <unordered_map>
+#include "SipMessage.h"
 
 class RequestsHandler {
 public:

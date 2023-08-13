@@ -8,6 +8,7 @@
 #include <memory>
 #include <linux/in.h>
 #include "SipMessage.h"
+#include <iostream>
 
 class SipMessageFactory {
 public:
