@@ -3,7 +3,7 @@
 //
 #include "jni.h"
 #include "utils/LogUtil.h"
-#include "SipServer.h"
+#include "SipServer.hpp"
 
 #include <eXosip2/eX_setup.h>
 
@@ -28,6 +28,7 @@ Java_com_hikvision_ThridParty_native_1startSipServer(JNIEnv *env, jobject thiz, 
     // TODO: implement native_startSipServer()
     const char *szIp;
     szIp = env->GetStringUTFChars(str_ip, 0);
+    LOGCATI("IP:%s",szIp);
     SipServer sipServer(szIp,port);
     env->ReleaseStringUTFChars(str_ip, szIp);
 }
