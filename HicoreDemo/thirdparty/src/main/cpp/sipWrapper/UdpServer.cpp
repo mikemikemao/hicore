@@ -17,8 +17,8 @@ UdpServer::UdpServer(std::string ip, int port, OnNewMessageEvent event) : _ip(st
 	}
 #endif
 
-	if ((_sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		LOGCATE("socket creation failed");
+	if ((_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		LOGCATE("socket creation failed _sockfd =%d errno=%d",_sockfd,errno);
 		return;
 	}
 

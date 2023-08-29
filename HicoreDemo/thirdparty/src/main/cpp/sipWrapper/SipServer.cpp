@@ -5,7 +5,7 @@ SipServer::SipServer(std::string ip, int port) :
 	_socket(ip, port, std::bind(&SipServer::onNewMessage, this, std::placeholders::_1, std::placeholders::_2)),
 	_handler(ip, port, std::bind(&SipServer::onHandled, this, std::placeholders::_1, std::placeholders::_2))
 {
-	//_socket.startReceive();
+	_socket.startReceive();
 }
 
 void SipServer::onNewMessage(std::string data, sockaddr_in src)

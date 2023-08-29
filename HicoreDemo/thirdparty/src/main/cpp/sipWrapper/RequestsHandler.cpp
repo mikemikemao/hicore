@@ -9,7 +9,7 @@ RequestsHandler::RequestsHandler(std::string serverIp, int serverPort,
 	_serverIp(std::move(serverIp)), _serverPort(serverPort),
 	_onHandled(onHandledEvent)
 {
-	//initHandlers();
+	initHandlers();
 }
 
 void RequestsHandler::initHandlers()
