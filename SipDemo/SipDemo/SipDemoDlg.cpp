@@ -6,6 +6,7 @@
 #include "SipDemoDlg.h"
 #include <hpr/HPR_Hpr.h>
 #include <osipparser2/osip_parser.h>
+#include "ClientMgr.h"
 
 #pragma comment(lib,"hpr.lib")
 #pragma comment(lib,"hlog.lib")
@@ -55,8 +56,14 @@ END_MESSAGE_MAP()
 
 CSipDemoDlg::CSipDemoDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CSipDemoDlg::IDD, pParent)
-	, m_svrIp(168829541)
-	, m_svrPort(5060)
+	, mServerIp(168829541)
+	, mServerPort(5060)
+	, mStartNo(0)
+	, mTotalNum(0)
+	, mTotalNumShow(0)
+	, mOnlineNum(0)
+	, mSuccCall(0)
+	, mCallHz(0)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -64,8 +71,14 @@ CSipDemoDlg::CSipDemoDlg(CWnd* pParent /*=NULL*/)
 void CSipDemoDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
-	DDX_IPAddress(pDX, IDC_IPADDR_SVR_IP, m_svrIp);
-	DDX_Text(pDX, IDC_EDIT_SVR_PORT, m_svrPort);
+	DDX_IPAddress(pDX, IDC_IPADDR_SVR_IP, mServerIp);
+	DDX_Text(pDX, IDC_EDIT_SVR_PORT, mServerPort);
+	DDX_Text(pDX, IDC_EDIT_START_NO, mStartNo);
+	DDX_Text(pDX, IDC_EDIT_TOTAL_NUM, mTotalNum);
+	DDX_Text(pDX, IDC_EDIT_TOTAL_NUM_SHOW, mTotalNumShow);
+	DDX_Text(pDX, IDC_EDIT_ONLINE_NUM, mOnlineNum);
+	DDX_Text(pDX, IDC_EDIT_SUCCESS_CALL, mSuccCall);
+	DDX_Text(pDX, IDC_EDIT_CALL_HZ, mCallHz);
 }
 
 BEGIN_MESSAGE_MAP(CSipDemoDlg, CDialog)
@@ -74,6 +87,9 @@ BEGIN_MESSAGE_MAP(CSipDemoDlg, CDialog)
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
 	ON_BN_CLICKED(IDC_BTN_REGISTER, &CSipDemoDlg::OnBnClickedBtnRegister)
+	ON_BN_CLICKED(IDC_BTN_CALL, &CSipDemoDlg::OnBnClickedBtnCall)
+	ON_BN_CLICKED(IDC_BTN_EXIT, &CSipDemoDlg::OnBnClickedBtnExit)
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -169,4 +185,61 @@ void CSipDemoDlg::OnBnClickedBtnRegister()
 	{
 		return;
 	}
+	mNetwork.start(mServerIp, mServerPort);
+	ClientMgr::createInstance()->init(mStartNo, mTotalNum);
+	mTotalNumShow = mTotalNum;
+
+	ClientMgr::getInstance()->sendRegister(mNetwork);
+	//mHaveRegister = TRUE;
+	SetTimer(1, 10*1000, NULL);
+	SetTimer(2, 2*60*1000, NULL);
+	SetTimer(3, 5*60*1000, NULL);
+
+}
+
+void CSipDemoDlg::OnBnClickedBtnCall()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (UpdateData() == 0)
+	{
+		return;
+	}
+
+	ClientMgr::getInstance()->sendCalling(mNetwork, mCallHz);
+	SetTimer(4, 1000, NULL);
+}
+
+void CSipDemoDlg::OnBnClickedBtnExit()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	mNetwork.stop();
+}
+
+void CSipDemoDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	if (nIDEvent == 1)
+	{
+		mOnlineNum = ClientMgr::getInstance()->getOnlineNum();
+		mSuccCall = ClientMgr::getInstance()->getDelayNumber();
+
+		UpdateData(FALSE);
+		if (mOnlineNum < mTotalNumShow)
+		{
+			ClientMgr::getInstance()->sendRegister(mNetwork);
+		}
+	}
+	else if (nIDEvent == 2)
+	{
+		ClientMgr::getInstance()->sendHeartbeat(mNetwork);
+	}
+	else if (nIDEvent == 3)
+	{
+		ClientMgr::getInstance()->checkOnline();
+	}
+	else if (nIDEvent == 4)
+	{
+		ClientMgr::getInstance()->sendCalling(mNetwork, mCallHz);
+	}
+	CDialog::OnTimer(nIDEvent);
 }

@@ -2,7 +2,7 @@
 //
 
 #pragma once
-
+#include "Network.h"
 
 // CSipDemoDlg ¶Ô»°¿ò
 class CSipDemoDlg : public CDialog
@@ -29,7 +29,18 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
-	DWORD m_svrIp;
-	UINT m_svrPort;
 	afx_msg void OnBnClickedBtnRegister();
+public:
+	DWORD mServerIp;
+	UINT mServerPort;
+	Network mNetwork;
+	UINT mStartNo;
+	UINT mTotalNum;
+	UINT mTotalNumShow;
+	UINT mOnlineNum;
+	DWORD mSuccCall;
+	afx_msg void OnBnClickedBtnCall();
+	UINT mCallHz;
+	afx_msg void OnBnClickedBtnExit();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };

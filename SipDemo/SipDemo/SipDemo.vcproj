@@ -188,6 +188,30 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\Client.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ClientMgr.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Markup.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\MemoryPool.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\MultiThreadWork.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Network.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\SipDemo.cpp"
 				>
 			</File>
@@ -221,6 +245,30 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\Client.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ClientMgr.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Markup.h"
+				>
+			</File>
+			<File
+				RelativePath=".\MemoryPool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\MultiThreadWork.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Network.h"
+				>
+			</File>
 			<File
 				RelativePath=".\Resource.h"
 				>
