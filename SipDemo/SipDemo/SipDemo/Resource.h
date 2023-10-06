@@ -1,6 +1,6 @@
-﻿//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ 生成的包含文件。
-// 由 SipDemo.rc 使用
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ generated include file.
+// Used by SipDemo.rc
 //
 #define IDR_MAINFRAME					128
 #define IDM_ABOUTBOX					0x0010
@@ -8,7 +8,7 @@
 #define IDS_ABOUTBOX					101
 #define IDD_SIPDEMO_DIALOG				102
 
-// 新对象的下一组默认值
+// �¶������һ��Ĭ��ֵ
 //
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
