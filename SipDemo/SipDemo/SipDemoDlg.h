@@ -28,4 +28,8 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+public:
+	DWORD m_svrIp;
+	UINT m_svrPort;
+	afx_msg void OnBnClickedBtnRegister();
 };

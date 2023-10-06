@@ -4,6 +4,13 @@
 #include "stdafx.h"
 #include "SipDemo.h"
 #include "SipDemoDlg.h"
+#include <hpr/HPR_Hpr.h>
+#include <osipparser2/osip_parser.h>
+
+#pragma comment(lib,"hpr.lib")
+#pragma comment(lib,"hlog.lib")
+#pragma comment(lib,"osipparser.lib")
+#pragma comment(lib,"vld.lib")
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -48,6 +55,8 @@ END_MESSAGE_MAP()
 
 CSipDemoDlg::CSipDemoDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CSipDemoDlg::IDD, pParent)
+	, m_svrIp(168829541)
+	, m_svrPort(5060)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -55,6 +64,8 @@ CSipDemoDlg::CSipDemoDlg(CWnd* pParent /*=NULL*/)
 void CSipDemoDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
+	DDX_IPAddress(pDX, IDC_IPADDR_SVR_IP, m_svrIp);
+	DDX_Text(pDX, IDC_EDIT_SVR_PORT, m_svrPort);
 }
 
 BEGIN_MESSAGE_MAP(CSipDemoDlg, CDialog)
@@ -62,6 +73,7 @@ BEGIN_MESSAGE_MAP(CSipDemoDlg, CDialog)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	//}}AFX_MSG_MAP
+	ON_BN_CLICKED(IDC_BTN_REGISTER, &CSipDemoDlg::OnBnClickedBtnRegister)
 END_MESSAGE_MAP()
 
 
@@ -95,7 +107,8 @@ BOOL CSipDemoDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
 	// TODO: 在此添加额外的初始化代码
-
+	HPR_Init();
+	parser_init();
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -148,3 +161,12 @@ HCURSOR CSipDemoDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+void CSipDemoDlg::OnBnClickedBtnRegister()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	if (UpdateData() == 0)
+	{
+		return;
+	}
+}
