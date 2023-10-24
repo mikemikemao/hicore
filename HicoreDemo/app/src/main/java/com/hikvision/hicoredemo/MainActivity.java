@@ -18,6 +18,7 @@ public class MainActivity extends AppCompatActivity {
         hicore.native_helloHicore();
         thridParty = new ThridParty();
         thridParty.native_helloWorld();
+        thridParty.native_startSipServer("10.6.120.12",5060);
 
     }
 }

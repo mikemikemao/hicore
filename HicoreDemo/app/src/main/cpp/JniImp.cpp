@@ -1,19 +1,19 @@
 //
 // Created by pirate
 //
+#include <sys/endian.h>
+#include <utils/FileOp.h>
 #include "jni.h"
 #include "utils/LogUtil.h"
-
+#include "string.h"
+#include "stdlib.h"
 #define NATIVE_HICORE_CLASS_NAME "com/hikvision/Hicore"
 
-/*
- * Class:     com_hikvision_jni_MyCam
- * Method:    stopPreview
- * Signature: ()V
- */
 JNIEXPORT void JNICALL helloHicore(JNIEnv *env, jobject instance)
 {
 	LOGCATE("hello hicore");
+	int ret = 0;
+
 }
 
 
