@@ -3,16 +3,52 @@
 //
 #include <sys/endian.h>
 #include <utils/FileOp.h>
+#include <include/aip/aip.h>
 #include "jni.h"
 #include "utils/LogUtil.h"
 #include "string.h"
 #include "stdlib.h"
 #define NATIVE_HICORE_CLASS_NAME "com/hikvision/Hicore"
 
+static int aip_call_back(AIP_EVENT_CALLBACK_PARAM_P pstParam)
+{
+
+}
+
+static void aip_base()
+{
+	AIP_INIT_PARAM_T stAipParam;
+	EXCEPTION_PARAM_T excPar;
+	memset(&excPar,0,sizeof(excPar));
+	memset(&stAipParam, 0, sizeof(stAipParam));
+
+	stAipParam.fnCbFun                             = aip_call_back;
+	stAipParam.stExceptionInfo.bEnableHwWatchdog = false;
+	stAipParam.stExceptionInfo.bEnableSfWatchdog = false;
+	stAipParam.stExceptionInfo.bPauseSfWatchdog  = false;
+	stAipParam.bEnableSecuriyUserLock            = true;
+	stAipParam.bEnableTimeMng                    = false;
+	stAipParam.bEnableNetMng                     = false;
+	stAipParam.bDisableSecurityResource          = false;
+
+	excPar.bEnableSfWatchdog = true;
+	if (0 != aip_exception_service_start(&excPar, NULL))
+	{
+		LOGCATE("aip_exception_service_start error.\n");
+	}
+	if (0 != aip_service_start(&stAipParam))
+	{
+		LOGCATE("aip_service_start error\n");
+	}
+
+}
+
+
 JNIEXPORT void JNICALL helloHicore(JNIEnv *env, jobject instance)
 {
 	LOGCATE("hello hicore");
 	int ret = 0;
+	aip_base();
 
 }
 

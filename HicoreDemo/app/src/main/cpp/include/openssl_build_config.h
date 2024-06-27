@@ -1,0 +1,27 @@
+#ifndef __OPENSSL_BUILD_CONFIG__
+#define __OPENSSL_BUILD_CONFIG__
+
+
+#define OPENSSL_VERSION           "1.1.1v"
+#define OPENSSL_VERSION_MAJOR     "1"
+#define OPENSSL_VERSION_MINOR     "1"
+#define OPENSSL_VERSION_PATCH     "1"
+#define OPENSSL_VERSION_FEATURE   "v"
+
+#define OPENSSL_VERSION_SVN       "614586"
+#define OPENSSL_SVN_COMMIT_TIME   "2023-08-23 16:24:52"
+#define OPENSSL_BUILD_TIME        "2023-08-23 16:34:59"
+#define OPENSSL_BUILD_TIME_OF_DAY "16:34:59"
+#define OPENSSL_BUILD_TIME_YEAR   23
+#define OPENSSL_BUILD_TIME_MONTH  8
+#define OPENSSL_BUILD_TIME_DAY    23
+
+
+#define OPENSSL_PLATFORM          "A2"
+#define OPENSSL_ABI               "64bit"
+
+#define OPENSSL_ANDROID               1
+
+#define CELLULAR_MODULE_CONFIG 1
+#define WIFI_MODULE_CONFIG 1
+#endif //__OPENSSL_BUILD_CONFIG__
